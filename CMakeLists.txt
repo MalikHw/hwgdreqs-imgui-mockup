@@ -34,9 +34,10 @@ FetchContent_MakeAvailable(imgui)
 # Add executable
 add_executable(${PROJECT_NAME} main.cpp)
 
-# Include directories
+# Include directories - FIXED: Properly point to imgui backends
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
     ${glfw_SOURCE_DIR}/include
 )
 
@@ -53,7 +54,6 @@ if(WIN32)
     )
     target_link_libraries(${PROJECT_NAME}
         opengl32
-        ${CMAKE_CURRENT_SOURCE_DIR}/libs/glfw3.lib
     )
 endif()
 
@@ -78,5 +78,6 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${glfw_BINARY_DIR}/src/Release/glfw3.dll"
         "${CMAKE_BINARY_DIR}/bin/"
+        COMMENT "Copying glfw3.dll to output directory"
     )
 endif()
