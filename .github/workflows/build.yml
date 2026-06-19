@@ -20,14 +20,37 @@ jobs:
     - name: Install CMake
       uses: lukka/get-cmake@latest
     
-    - name: Install SDL2
+    # Option 1: Install SDL2 and SDL2_image using vcpkg (recommended)
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        vcpkgGitCommitId: '8c7a7fb7c8c0d74c4347802c734dff63026cff38'
+    
+    - name: Install SDL2 via vcpkg
       run: |
-        choco install sdl2
-        choco install sdl2-image
-      shell: cmd
+        ${{ github.workspace }}/vcpkg/vcpkg install sdl2 sdl2-image --triplet x64-windows
+      shell: bash
+    
+    # Option 2: Or use the official SDL2 installer (alternative)
+    # - name: Download and install SDL2
+    #   run: |
+    #     curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip -o SDL2.zip
+    #     unzip SDL2.zip -d SDL2
+    #     echo "SDL2_DIR=${{ github.workspace }}/SDL2/SDL2-2.28.5" >> $GITHUB_ENV
+    #   shell: bash
+    
+    # - name: Download and install SDL2_image
+    #   run: |
+    #     curl -L https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-devel-2.8.2-VC.zip -o SDL2_image.zip
+    #     unzip SDL2_image.zip -d SDL2_image
+    #     echo "SDL2_IMAGE_DIR=${{ github.workspace }}/SDL2_image/SDL2_image-2.8.2" >> $GITHUB_ENV
+    #   shell: bash
     
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      shell: bash
     
     - name: Build
       run: cmake --build build --config Release --parallel
@@ -36,5 +59,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: HwGDReqs-Windows
-        path: build/Release/HwGDReqs.exe
+        path: |
+          build/Release/HwGDReqs.exe
+          vcpkg/installed/x64-windows/bin/*.dll
+          build/Release/*.dll
         if-no-files-found: error
