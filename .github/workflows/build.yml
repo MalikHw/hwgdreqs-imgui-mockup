@@ -1,0 +1,49 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+    
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    
+    - name: Build
+      run: cmake --build build --config Release --parallel
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HwGDReqs-Windows
+        path: |
+          build/Release/HwGDReqs.exe
+          build/bin/glfw3.dll
+        if-no-files-found: error
+
+    - name: Create release package
+      run: |
+        mkdir release-package
+        copy build\Release\HwGDReqs.exe release-package\
+        copy build\bin\glfw3.dll release-package\ 2>nul || echo No DLL found
+        7z a -tzip HwGDReqs-Windows.zip ./release-package/*
+      shell: cmd
+    
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: HwGDReqs-Windows-ZIP
+        path: HwGDReqs-Windows.zip
+        if-no-files-found: error
