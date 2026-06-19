@@ -1,83 +1,52 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(HwGDReqs)
-
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -s")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-# Set default build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
+if(NOT DEFINED APP_VERSION)
+    set(APP_VERSION "dev")
 endif()
+add_compile_definitions(APP_VERSION="${APP_VERSION}")
 
-# Find OpenGL
-find_package(OpenGL REQUIRED)
+# Find SDL2 (using your working setup)
+find_package(SDL2 REQUIRED)
+find_package(SDL2_image QUIET)
 
-# Download and setup dependencies
-include(FetchContent)
-
-# GLFW
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.3.8
-)
-FetchContent_MakeAvailable(glfw)
-
-# Dear ImGui
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.89.9
-)
-FetchContent_MakeAvailable(imgui)
-
-# Add executable
-add_executable(${PROJECT_NAME} main.cpp)
-
-# Include directories - FIXED: Properly point to imgui backends
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${imgui_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}/backends
-    ${glfw_SOURCE_DIR}/include
+# Setup ImGui from extern folder (like your working app)
+set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/extern/imgui)
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl2.cpp
 )
 
-# Link libraries
-target_link_libraries(${PROJECT_NAME}
-    OpenGL::GL
-    glfw
+# Main executable
+add_executable(HwGDReqs WIN32 main.cpp ${IMGUI_SOURCES})
+
+# Include directories
+target_include_directories(HwGDReqs PRIVATE
+    ${SDL2_INCLUDE_DIRS}
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
 )
 
-# Platform-specific settings
-if(WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        _CRT_SECURE_NO_WARNINGS
-    )
-    target_link_libraries(${PROJECT_NAME}
-        opengl32
-    )
-endif()
-
-# ImGui source files
-target_sources(${PROJECT_NAME} PRIVATE
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+# Link libraries (adapted from your working app)
+target_link_libraries(HwGDReqs PRIVATE
+    ${SDL2_LIBRARIES}
+    SDL2_image::SDL2_image
+    opengl32
+    shell32
+    comdlg32
+    gdi32
+    winmm
+    advapi32
+    winhttp
+    urlmon
 )
 
-# Set output directory
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-# Copy dependencies for Windows
-if(WIN32)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${glfw_BINARY_DIR}/src/Release/glfw3.dll"
-        "${CMAKE_BINARY_DIR}/bin/"
-        COMMENT "Copying glfw3.dll to output directory"
-    )
-endif()
+# Set output name
+set_target_properties(HwGDReqs PROPERTIES OUTPUT_NAME "HwGDReqs")

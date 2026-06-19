@@ -1,10 +1,12 @@
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include <GLFW/glfw3.h>
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl2.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 #include <vector>
 #include <string>
-#include <functional>
+#include <map>
+#include <algorithm>
 
 // Data structures
 struct QueueEntry {
@@ -13,7 +15,7 @@ struct QueueEntry {
     std::string creator;
     bool expanded;
     
-    QueueEntry(const std::string& t, const std::string& r, const std::string& c)
+    QueueEntry(const std::string& t = "", const std::string& r = "", const std::string& c = "")
         : title(t), requester(r), creator(c), expanded(false) {}
 };
 
@@ -31,7 +33,7 @@ public:
         
         // Fill remaining slots with empty entries
         for (int i = 0; i < 4; i++) {
-            queueEntries.push_back(QueueEntry("", "", ""));
+            queueEntries.push_back(QueueEntry());
         }
         
         // Sample banned users
@@ -242,17 +244,17 @@ private:
             // Show banned requesters
             for (const auto& user : bannedUsers) {
                 if (user.isRequester) {
-                    ImGui::Text("🔸 %s", user.name.c_str());
+                    ImGui::Text("%s", user.name.c_str());
                     ImGui::SameLine(ImGui::GetWindowWidth() - 70);
                     if (ImGui::SmallButton("unban")) {
                         // Unban action
                     }
                 }
             }
+            size_t requesterCount = std::count_if(bannedUsers.begin(), bannedUsers.end(), 
+                [](const BannedUser& u) { return u.isRequester; });
             ImGui::TextColored(ImVec4(0.43f, 0.43f, 0.54f, 1.0f), 
-                "(%zu banned requesters)", 
-                std::count_if(bannedUsers.begin(), bannedUsers.end(), 
-                    [](const BannedUser& u) { return u.isRequester; }));
+                "(%zu banned requesters)", requesterCount);
         } else {
             // Show banned creators
             for (const auto& user : bannedUsers) {
@@ -264,10 +266,10 @@ private:
                     }
                 }
             }
+            size_t creatorCount = std::count_if(bannedUsers.begin(), bannedUsers.end(), 
+                [](const BannedUser& u) { return !u.isRequester; });
             ImGui::TextColored(ImVec4(0.43f, 0.43f, 0.54f, 1.0f), 
-                "(%zu banned creators)", 
-                std::count_if(bannedUsers.begin(), bannedUsers.end(), 
-                    [](const BannedUser& u) { return !u.isRequester; }));
+                "(%zu banned creators)", creatorCount);
         }
         
         ImGui::EndChild();
@@ -282,35 +284,33 @@ private:
     }
 };
 
-// Main application entry point
-int main() {
-    // Initialize GLFW
-    if (!glfwInit()) {
-        return 1;
+// Main application entry point (SDL2 + OpenGL2 - exactly like your working app)
+int main(int argc, char* argv[]) {
+    // Setup SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS) != 0) {
+        printf("Error: %s\n", SDL_GetError());
+        return -1;
     }
-    
-    // Set OpenGL version
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    
-    // Create window
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "HwGDReqs", nullptr, nullptr);
-    if (!window) {
-        glfwTerminate();
-        return 1;
-    }
-    
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
-    
-    // Initialize ImGui
+
+    // Setup window
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_Window* window = SDL_CreateWindow("HwGDReqs", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+
+    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    
-    // Setup ImGui style
+
+    // Setup Dear ImGui style (matching your HTML mockup)
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 0.0f;
@@ -330,9 +330,6 @@ int main() {
     colors[ImGuiCol_Button] = ImVec4(0.23f, 0.23f, 0.34f, 1.0f);
     colors[ImGuiCol_ButtonHovered] = ImVec4(0.31f, 0.31f, 0.44f, 1.0f);
     colors[ImGuiCol_ButtonActive] = ImVec4(0.16f, 0.16f, 0.26f, 1.0f);
-    colors[ImGuiCol_Header] = ImVec4(0.23f, 0.23f, 0.34f, 1.0f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.31f, 0.31f, 0.44f, 1.0f);
-    colors[ImGuiCol_HeaderActive] = ImVec4(0.16f, 0.16f, 0.26f, 1.0f);
     colors[ImGuiCol_CheckMark] = ImVec4(0.42f, 0.55f, 1.0f, 1.0f);
     colors[ImGuiCol_SliderGrab] = ImVec4(0.42f, 0.55f, 1.0f, 1.0f);
     colors[ImGuiCol_SliderGrabActive] = ImVec4(0.42f, 0.55f, 1.0f, 1.0f);
@@ -342,42 +339,52 @@ int main() {
     colors[ImGuiCol_FrameBgActive] = ImVec4(0.23f, 0.23f, 0.34f, 1.0f);
     colors[ImGuiCol_TitleBg] = ImVec4(0.18f, 0.18f, 0.25f, 1.0f);
     colors[ImGuiCol_TitleBgActive] = ImVec4(0.18f, 0.18f, 0.25f, 1.0f);
-    
-    // Setup platform/renderer bindings
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
-    
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL2_Init();
+
+    // Application instance
     HwGDReqsApp app;
-    
+
     // Main loop
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+    bool done = false;
+    while (!done) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                done = true;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+                done = true;
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL2_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        
+
         // Render application
         app.Render();
-        
+
+        // Render
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(0.12f, 0.12f, 0.18f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        
-        glfwSwapBuffers(window);
+        ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+
+        SDL_GL_SwapWindow(window);
     }
-    
+
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    
+
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
     return 0;
 }

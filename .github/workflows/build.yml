@@ -14,9 +14,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Install CMake
       uses: lukka/get-cmake@latest
+    
+    - name: Install SDL2
+      run: |
+        choco install sdl2
+        choco install sdl2-image
+      shell: cmd
     
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -28,22 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: HwGDReqs-Windows
-        path: |
-          build/Release/HwGDReqs.exe
-          build/bin/glfw3.dll
-        if-no-files-found: error
-
-    - name: Create release package
-      run: |
-        mkdir release-package
-        copy build\Release\HwGDReqs.exe release-package\
-        copy build\bin\glfw3.dll release-package\ 2>nul || echo No DLL found
-        7z a -tzip HwGDReqs-Windows.zip ./release-package/*
-      shell: cmd
-    
-    - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: HwGDReqs-Windows-ZIP
-        path: HwGDReqs-Windows.zip
+        path: build/Release/HwGDReqs.exe
         if-no-files-found: error
