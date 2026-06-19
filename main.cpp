@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <cstdio>
 
 // Data structures
 struct QueueEntry {
@@ -244,7 +245,7 @@ private:
             // Show banned requesters
             for (const auto& user : bannedUsers) {
                 if (user.isRequester) {
-                    ImGui::Text("%s", user.name.c_str());
+                    ImGui::Text("🔸 %s", user.name.c_str());
                     ImGui::SameLine(ImGui::GetWindowWidth() - 70);
                     if (ImGui::SmallButton("unban")) {
                         // Unban action
@@ -284,7 +285,7 @@ private:
     }
 };
 
-// Main application entry point (SDL2 + OpenGL2 - exactly like your working app)
+// Main application entry point
 int main(int argc, char* argv[]) {
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS) != 0) {
@@ -302,7 +303,7 @@ int main(int argc, char* argv[]) {
     SDL_Window* window = SDL_CreateWindow("HwGDReqs", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(1);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -310,17 +311,29 @@ int main(int argc, char* argv[]) {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    // Setup Dear ImGui style (matching your HTML mockup)
+    // Load Arial font
+    ImFont* font = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/arial.ttf", 16.0f);
+    if (!font) {
+        // Fallback to default font if Arial fails
+        printf("Warning: Could not load Arial font, using default\n");
+        font = io.Fonts->AddFontDefault();
+    }
+    io.FontDefault = font;
+
+    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 0.0f;
-    style.ChildRounding = 0.0f;
-    style.FrameRounding = 0.0f;
-    style.ScrollbarRounding = 0.0f;
-    style.GrabRounding = 0.0f;
-    style.TabRounding = 0.0f;
     
-    // Custom dark theme matching HTML mockup
+    // Enable rounded corners on windows only
+    style.WindowRounding = 8.0f;      // Rounded window corners
+    style.ChildRounding = 0.0f;       // No rounding on child windows
+    style.FrameRounding = 0.0f;       // No rounding on frames
+    style.PopupRounding = 0.0f;       // No rounding on popups
+    style.ScrollbarRounding = 0.0f;   // No rounding on scrollbars
+    style.GrabRounding = 0.0f;        // No rounding on grab handles
+    style.TabRounding = 0.0f;         // No rounding on tabs
+    
+    // Custom dark theme matching your HTML mockup
     ImVec4* colors = style.Colors;
     colors[ImGuiCol_WindowBg] = ImVec4(0.18f, 0.18f, 0.25f, 1.0f);
     colors[ImGuiCol_ChildBg] = ImVec4(0.13f, 0.13f, 0.20f, 1.0f);
